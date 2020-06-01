@@ -8,14 +8,16 @@ use crate::wal::{WalReference, WalOffset};
 
 type Result<T>     = std::result::Result<T, Box<dyn Error>>;
 type TransactionId = u64;
+type FileId        = u64;
+type PageId        = u64;
 
 pub struct PageOffset {
-    file_id: u64,
-    page_id: u64
+    file_id: FileId,
+    page_id: PageId
 }
 
 pub struct TransactionWalOffset {
-    transaction_id: u64,
+    transaction_id: TransactionId,
     wal_offset:     WalOffset
 }
 
@@ -32,11 +34,15 @@ pub struct TransactionManager {
 
     // Cached mapping of file descriptors. If a file requested is not in the
     // cache, it will be opened and then cached in the map.
-    files:        HashMap<u64, File>,
+    files:        HashMap<FileId, File>,
 
     // Cached mapping of modified pages. Used to accelerate reads. Cleared
     // during checkpointing.
-    pages:        HashMap<PageOffset, Vec<TransactionWalOffset>>,
+    page_events:  HashMap<PageOffset, Vec<TransactionWalOffset>>,
+
+    // Cached mapping of modified files. Used to accelerate reads. Cleared
+    // during checkpointing.
+    file_events:  HashMap<FileId, Vec<TransactionWalOffset>>,
 
     // Mapping of active transactions to WAL entries they have made. Used by
     // the checkpointer to determine how much progress can be made, and by
@@ -75,10 +81,35 @@ impl TransactionManager {
             wal:          WalReference::new(&format!("{}/WAL", base_path))?,
             base_path:    base_path.clone(),
             files:        HashMap::new(),
-            pages:        HashMap::new(),
+            page_events:  HashMap::new(),
+            file_events:  HashMap::new(),
             transactions: HashMap::new(),
             transaction:  0,
             file:         file
         })
+    }
+
+    // Begin a transaction. This returns a new transaction ID which is used
+    // as a handle for a client to access the database.
+    pub fn begin_transaction(&mut self) -> Result<TransactionId> {
+        Err("not implemented".into())
+    }
+
+    // In the context of `txn`, read a page from `file` at `offset`. Note that
+    // the offset is a page offset, not a memory offset. Client code is
+    // advised to cache reads until it is necessary to commit them.
+    pub fn read_page(&mut self, txn: TransactionId, file: FileId, offset: PageId) -> Result<[u8; 4096]> {
+        Err("not implemented".into())
+    }
+
+    // In the context of `txn`, write a page to `file` at `offset`. Note that
+    // the offset is a page offset, not a memory offset. Client code is
+    // advised to cache writes until it is necessary to commit them.
+    pub fn write_page(&mut self, txn: TransactionId, file: FileId, offset: PageId, contents: &[u8; 4096]) -> Result<()> {
+        Err("not implemented".into())
+    }
+
+    pub fn wal(&mut self) -> &mut WalReference {
+        &mut self.wal
     }
 }
