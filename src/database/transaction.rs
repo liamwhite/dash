@@ -1,5 +1,8 @@
-use std::error::Error;
+use std::fs;
 use std::fs::File;
+use std::cmp;
+use std::path::Path;
+use std::error::Error;
 use std::collections::HashMap;
 use crate::wal::{WalReference, WalOffset};
 
@@ -43,18 +46,39 @@ pub struct TransactionManager {
     // ID of the most recent transaction. Used only for issuing new IDs.
     // Transaction IDs are ephemeral and reset from zero every time the
     // database server is restarted.
-    transaction:  u64
+    transaction:  u64,
+
+    // ID of the most recently created file. Used only for issuing new IDs.
+    // File IDs do not reset after deletion.
+    file:         u64
 }
 
 impl TransactionManager {
     pub fn new(base_path: &String) -> Result<TransactionManager> {
+        // Find most recent file ID. Mutable state used because
+        // read_dir iterator can fail.
+        let mut file = 0;
+
+        for entry in fs::read_dir(Path::new(base_path))? {
+            match entry?.file_name().into_string() {
+                Ok(entry) => {
+                    match str::parse::<u64>(&entry) {
+                        Ok(val) => { file = cmp::max(file, val) },
+                        Err(_) => {}
+                    }
+                }
+                Err(_) => {}
+            }
+        }
+
         Ok(TransactionManager {
             wal:          WalReference::new(&format!("{}/WAL", base_path))?,
             base_path:    base_path.clone(),
             files:        HashMap::new(),
             pages:        HashMap::new(),
             transactions: HashMap::new(),
-            transaction:  0
+            transaction:  0,
+            file:         file
         })
     }
 }
