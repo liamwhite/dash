@@ -18,12 +18,12 @@ pub enum WalEvent {
 
 #[repr(C)]
 pub struct WalEntry {
-    event:          WalEvent,
-    transaction_id: u64,
-    file_id:        u64,
-    page_id:        u64,
-    undo:           [u8; 4096],
-    redo:           [u8; 4096]
+    pub event:          WalEvent,
+    pub transaction_id: u64,
+    pub file_id:        u64,
+    pub page_id:        u64,
+    pub undo:           [u8; 4096],
+    pub redo:           [u8; 4096]
 }
 
 pub struct WalReference {

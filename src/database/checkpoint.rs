@@ -1,18 +1,18 @@
-use crate::wal::{WalReference, WalOffset};
-use crate::transaction::TransactionManager;
+use std::error::Error;
+use crate::database::wal::*;
+use crate::database::transaction::TransactionManager;
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
 // Apply a WAL entry to the filesystem. To be done during checkpointing
 // and crash recovery.
 pub fn apply_wal_event(wal: &WalEntry, manager: &mut TransactionManager) -> Result<()> {
-    match wal.event {
-        ModifyPage => {},
-        BeginTransaction => {},
-        CommitTransaction => {},
-        ExtendFile => {},
-        ShrinkFile => {},
-        CreateFile => {}
+    match &wal.event {
+        WalEvent::ModifyPage => {},
+        WalEvent::CommitTransaction => {},
+        WalEvent::ExtendFile => {},
+        WalEvent::ShrinkFile => {},
+        WalEvent::CreateFile => {}
     }
 
     Err("not implemented".into())

@@ -4,12 +4,13 @@ use std::cmp;
 use std::path::Path;
 use std::error::Error;
 use std::collections::HashMap;
-use crate::wal::{WalReference, WalOffset};
+use crate::database::wal::{WalReference, WalOffset};
 
-type Result<T>     = std::result::Result<T, Box<dyn Error>>;
-type TransactionId = u64;
-type FileId        = u64;
-type PageId        = u64;
+type Result<T> = std::result::Result<T, Box<dyn Error>>;
+
+pub type TransactionId = u64;
+pub type FileId        = u64;
+pub type PageId        = u64;
 
 pub struct PageOffset {
     file_id: FileId,
