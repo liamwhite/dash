@@ -165,6 +165,8 @@ impl TransactionManager {
 
     fn get_page_from_undo_cache(&mut self, txn: TransactionId, file: FileId, offset: PageId) -> Option<[u8; 4096]> {
         // Two cases:
+        // 1. this transaction previously touched the page
+        // 2. a committed transaction touched the page before we started
         None
     }
 
@@ -186,15 +188,6 @@ impl TransactionManager {
         assert_eq!(file_ref.read(&mut buf)?, 4096);
 
         Ok(buf)
-    }
-
-    fn get_undo_page_from_wal_event(&mut self, wal_offset: WalOffset) -> Result<[u8; 4096]> {
-        let entry = self.wal.read_entry(wal_offset)?;
-
-        match entry {
-            WalEvent::ModifyPageEvent { transaction_id: _, file_id: _, page_id: _, undo, redo: _ } => Ok(undo),
-            _ => Err("invalid WAL offset".into())
-        }
     }
 
     fn get_redo_page_from_wal_event(&mut self, wal_offset: WalOffset) -> Result<[u8; 4096]> {

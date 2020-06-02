@@ -28,6 +28,9 @@ pub enum WalEvent {
     CommitTransactionEvent {
         transaction_id: u64
     },
+    AbortTransactionEvent {
+        transaction_id: u64
+    },
     ExtendFileEvent {
         transaction_id: u64,
         file_id:        u64,
@@ -72,6 +75,17 @@ impl WalReference {
     // Log that a transaction is to be committed.
     pub fn commit_transaction(&mut self, transaction_id: u64) -> Result<WalOffset> {
         let event = WalEvent::CommitTransactionEvent { transaction_id };
+        let position = self.file.seek(SeekFrom::End(0))?;
+
+        bincode::serialize_into(&self.file, &event)?;
+        self.file.sync_data()?;
+
+        Ok(position)
+    }
+
+    // Log that a transaction is to be aborted.
+    pub fn abort_transaction(&mut self, transaction_id: u64) -> Result<WalOffset> {
+        let event = WalEvent::AbortTransactionEvent { transaction_id };
         let position = self.file.seek(SeekFrom::End(0))?;
 
         bincode::serialize_into(&self.file, &event)?;
