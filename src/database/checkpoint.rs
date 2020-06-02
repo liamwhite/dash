@@ -6,14 +6,14 @@ type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
 // Apply a WAL entry to the filesystem. To be done during checkpointing
 // and crash recovery.
-pub fn apply_wal_event(wal: &WalEntry, manager: &mut TransactionManager) -> Result<()> {
-    match &wal.event {
-        WalEvent::ModifyPage => {},
-        WalEvent::CommitTransaction => {},
-        WalEvent::ExtendFile => {},
-        WalEvent::ShrinkFile => {},
-        WalEvent::CreateFile => {}
-    }
+pub fn apply_wal_event(event: &WalEvent, manager: &mut TransactionManager) -> Result<()> {
+    //match event {
+    //    ModifyPageEvent => {},
+    //    CommitTransactionEvent => {},
+    //    ExtendFileEvent => {},
+    //    ShrinkFileEvent => {},
+    //    CreateFileEvent => {}
+    //}
 
     Err("not implemented".into())
 }

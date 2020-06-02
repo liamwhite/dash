@@ -1,29 +1,40 @@
 use std::fs::File;
 use std::fs::OpenOptions;
+use std::io::SeekFrom;
+use std::io::prelude::*;
 use std::path::Path;
 use std::error::Error;
+use serde::{Serialize, Deserialize};
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
 pub type WalOffset = u64;
 
-#[repr(C)]
+#[derive(Serialize, Deserialize)]
 pub enum WalEvent {
-    ModifyPage,
-    CommitTransaction,
-    ExtendFile,
-    ShrinkFile,
-    CreateFile
-}
-
-#[repr(C)]
-pub struct WalEntry {
-    pub event:          WalEvent,
-    pub transaction_id: u64,
-    pub file_id:        u64,
-    pub page_id:        u64,
-    pub undo:           [u8; 4096],
-    pub redo:           [u8; 4096]
+    ModifyPageEvent {
+        transaction_id: u64,
+        file_id:        u64,
+        page_id:        u64,
+        undo:           [u8; 4096],
+        redo:           [u8; 4096]
+    },
+    CommitTransactionEvent {
+        transaction_id: u64
+    },
+    ExtendFileEvent {
+        transaction_id: u64,
+        file_id:        u64,
+        extend_amt:     i64,
+    },
+    CreateFileEvent {
+        transaction_id: u64,
+        file_id:        u64
+    },
+    DeleteFileEvent {
+        transaction_id: u64,
+        file_id:        u64
+    }
 }
 
 pub struct WalReference {
@@ -42,38 +53,66 @@ impl WalReference {
     }
 
     // Log that a page is to be modified.
-    pub fn modify_page(&self, transaction_id: u64, file_id: u64, page_id: u64, old: &[u8; 4096], new: &[u8; 4096]) -> Result<WalOffset> {
-        Err("not implemented".into())
+    pub fn modify_page(&self, transaction_id: u64, file_id: u64, page_id: u64, undo: &[u8; 4096], redo: &[u8; 4096]) -> Result<WalOffset> {
+        let event = WalEvent::ModifyPageEvent { transaction_id, file_id, page_id, undo: undo.clone(), redo: redo.clone() };
+        let position = self.file.seek(SeekFrom::End(0))?;
+
+        bincode::serialize_into(&self.file, &event)?;
+
+        Ok(position)
     }
 
     // Log that a transaction is to be committed.
     pub fn commit_transaction(&self, transaction_id: u64) -> Result<WalOffset> {
-        Err("not implemented".into())
+        let event = WalEvent::CommitTransactionEvent { transaction_id };
+        let position = self.file.seek(SeekFrom::End(0))?;
+
+        bincode::serialize_into(&self.file, &event)?;
+
+        Ok(position)
     }
 
     // Log that a file is to be extended by `extend_pages` pages.
-    pub fn extend_file(&self, transaction_id: u64, file_id: u64, extend_pages: u64) -> Result<WalOffset> {
-        Err("not implemented".into())
-    }
+    pub fn extend_file(&self, transaction_id: u64, file_id: u64, extend_amt: i64) -> Result<WalOffset> {
+        let event = WalEvent::ExtendFileEvent { transaction_id, file_id, extend_amt };
+        let position = self.file.seek(SeekFrom::End(0))?;
 
-    // Log that a file is to be shrunk by `shrink_pages` pages.
-    pub fn shrink_file(&self, transaction_id: u64, file_id: u64, shrink_pages: u64) -> Result<WalOffset> {
-        Err("not implemented".into())
+        bincode::serialize_into(&self.file, &event)?;
+
+        Ok(position)
     }
 
     // Log that an empty file with ID `file_id` is to be created.
     pub fn create_file(&self, transaction_id: u64, file_id: u64) -> Result<WalOffset> {
-        Err("not implemented".into())
+        let event = WalEvent::CreateFileEvent { transaction_id, file_id };
+        let position = self.file.seek(SeekFrom::End(0))?;
+
+        bincode::serialize_into(&self.file, &event)?;
+
+        Ok(position)
+    }
+
+    // Log that an empty file with ID `file_id` is to be deleted.
+    pub fn delete_file(&self, transaction_id: u64, file_id: u64) -> Result<WalOffset> {
+        let event = WalEvent::DeleteFileEvent { transaction_id, file_id };
+        let position = self.file.seek(SeekFrom::End(0))?;
+
+        bincode::serialize_into(&self.file, &event)?;
+
+        Ok(position)
     }
 
     // Read an entry at a given offset from the log.
-    pub fn read_entry(&self, offset: WalOffset) -> Result<WalEntry> {
-        Err("not implemented".into())
+    pub fn read_entry(&self, offset: WalOffset) -> Result<WalEvent> {
+        let position = self.file.seek(SeekFrom::Start(offset))?;
+
+        Ok(bincode::deserialize_from::<_, WalEvent>(&self.file)?)
     }
 
     // Truncate (remove) the WAL. To be done during checkpointing and crash
     // recovery.
     pub fn truncate(&self) -> Result<()> {
-        Err("not implemented".into())
+        self.file.seek(SeekFrom::Start(0))?;
+        Ok(self.file.set_len(0)?)
     }
 }
